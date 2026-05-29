@@ -21,7 +21,7 @@ sprint: "{Sprint 名称}"
 related_stories:
   - "STORY-X-XX"
   - "STORY-Y-YY"
-assignee: "{负责人@minieye.cc}"
+assignee: "{负责人@example.com}"
 created_at: "YYYY-MM-DD"
 target_date: "YYYY-MM-DD"
 tags:
@@ -220,5 +220,5 @@ version: "1.0"
 
 **创建日期**: YYYY-MM-DD
 **最后更新**: YYYY-MM-DD
-**维护者**: {负责人@minieye.cc}
+**维护者**: {负责人@example.com}
 **状态**: OPEN

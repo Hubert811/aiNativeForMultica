@@ -155,7 +155,7 @@ description: "Story 简要描述"
 status: "TODO"
 priority: "P1"
 story_points: 3
-assignee: "developer@minieye.cc"
+assignee: "developer@example.com"
 start_date: "2026-02-03"
 target_date: "2026-02-10"
 dependencies: []
@@ -213,7 +213,7 @@ updated_at: "2026-02-03"
 ---
 
 **创建日期**: 2026-02-03
-**维护者**: developer@minieye.cc
+**维护者**: developer@example.com
 **相关 Epic**: EPIC-8
 EOF
 ```
