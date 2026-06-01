@@ -57,3 +57,75 @@ multica issue list --project <project-id> --output json
 ```
 
 查询 Issue 状态，确认父子 Issue 关系和 metadata 完整性。
+
+## 测试骨架替换指南
+
+Java SpringBoot 项目的测试目录结构应遵循以下规范：
+
+```
+src/test/java/com/example/project/
+├── unit/                    # UT - 单元测试（JUnit 5 + Mockito）
+│   ├── UserServiceTest.java
+│   └── OrderValidatorTest.java
+├── api/                     # API - 接口测试（RestAssured / MockMvc）
+│   ├── UserControllerApiTest.java
+│   └── OrderControllerApiTest.java
+├── sit/                     # SIT - 集成测试（TestContainers + @SpringBootTest）
+│   ├── UserRepositorySIT.java
+│   └── OrderServiceSIT.java
+└── uat/                     # UAT - 验收测试（Cucumber）
+    ├── stepdefs/
+    ├── UserLogin.feature
+    └── OrderFlow.feature
+```
+
+### 替换旧版测试框架
+
+| 旧版 | 新版 Java 工具 |
+|---|---|
+| pytest / unittest | JUnit 5 |
+| unittest.mock / pytest-mock | Mockito |
+| pytest-httpserver / requests | RestAssured / MockMvc |
+| docker-compose + 手动启动 | TestContainers |
+| behave / pytest-bdd | Cucumber-JVM |
+| selenium（Python） | Selenium WebDriver（Java） |
+| pytest-cov | JaCoCo |
+
+### Maven 依赖参考
+
+```xml
+<!-- JUnit 5 -->
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <scope>test</scope>
+</dependency>
+
+<!-- Mockito -->
+<dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-core</artifactId>
+    <scope>test</scope>
+</dependency>
+
+<!-- TestContainers -->
+<dependency>
+    <groupId>org.testcontainers</groupId>
+    <artifactId>testcontainers</artifactId>
+    <scope>test</scope>
+</dependency>
+
+<!-- RestAssured -->
+<dependency>
+    <groupId>io.rest-assured</groupId>
+    <artifactId>rest-assured</artifactId>
+    <scope>test</scope>
+</dependency>
+
+<!-- Cucumber -->
+<dependency>
+    <groupId>io.cucumber</groupId>
+    <artifactId>cucumber-java</artifactId>
+    <scope>test</scope>
+</dependency>
+```
