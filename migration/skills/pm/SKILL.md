@@ -86,18 +86,20 @@ git log --oneline --all --grep="STORY-XXX" -10
 git show <commit-sha> --stat
 ```
 
-代码验证通过后，通过 CLI 更新状态：
+代码验证通过后，更新 status 和 phase：
 
 ```bash
 multica issue status <story-id> in_review
+multica issue metadata set <story-id> --key phase --value reviewing
 ```
 
 不要用 `sed` 修改 Markdown 文件中的状态。
 
-Testing 阶段通过 metadata 标记：
+流程后续阶段只更新 phase，不碰 status：
 
 ```bash
-multica issue metadata set <story-id> --key testing --type bool --value true
+# AC 验收通过，进入测试
+multica issue metadata set <story-id> --key phase --value testing
 ```
 
 ### Step 5: 验收验证
