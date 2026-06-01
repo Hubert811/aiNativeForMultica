@@ -1,6 +1,6 @@
 1|---
 2|skill: "qa"
-3|description: "QA 工作技能 - 测试分层架构、UT 单元测试、SIT 系统集成测试、UAT 用户验收测试、API 接口测试、测试报告管理。当用户提到测试、QA、质量保证、单元测试、集成测试、验收测试、测试用例设计、pytest、go test、测试覆盖率、测试报告、回归测试、TDD、测试框架、问题排查、测试环境、测试数据、测试幂等性、或需要设计/执行测试时，必须使用此技能。确保所有测试活动遵循分层架构和幂等性原则。"
+3|description: "QA 工作技能 - 测试分层架构、UT 单元测试、SIT 系统集成测试、UAT 用户验收测试、API 接口测试、测试报告管理。当用户提到测试、QA、质量保证、单元测试、集成测试、验收测试、测试用例设计、JUnit、Mockito、TestContainers、RestAssured、Cucumber、测试覆盖率、测试报告、回归测试、TDD、测试框架、问题排查、测试环境、测试数据、测试幂等性、或需要设计/执行测试时，必须使用此技能。确保所有测试活动遵循分层架构和幂等性原则。"
 4|version: "6.0"
 5|---
 6|
@@ -54,26 +54,27 @@
 54|### 核心规则（强制执行）
 55|
 **规则 1：目录对应关系**
-- ✅ **API 测试** → 参见 `archetype-config.yml` → `test.layers.api`
-- ✅ **SIT 测试** → 参见 `archetype-config.yml` → `test.layers.sit`
-- ✅ **UAT 测试** → 参见 `archetype-config.yml` → `test.layers.uat`
-- ❌ **禁止**：将测试放在子目录中
+- ✅ **UT 测试** → `src/test/java/.../unit/`
+- ✅ **API 测试** → `src/test/java/.../api/`
+- ✅ **SIT 测试** → `src/test/java/.../sit/`
+- ✅ **UAT 测试** → `src/test/java/.../uat/`
+- ❌ **禁止**：将测试放在非对应目录中
 
 **规则 2：回归测试必须完整执行**
 ```bash
-# ✅ 正确：运行所有测试（命令见 archetype-config.yml）
-# UT:    build_tool.commands.test
-# API:   test.layers.api.run_command 或 test.layers.api.pytest_fallback.run_command
-# SIT:   test.layers.sit.run_command 或 test.layers.sit.pytest_fallback.run_command
-# UAT:   test.layers.uat.run_command 或 test.layers.uat.pytest_fallback.run_command
+# ✅ 正确：运行所有测试
+# UT:    mvn test
+# API:   mvn test -Dtest="**/api/**"
+# SIT:   mvn test -Dtest="**/sit/**"
+# UAT:   mvn test -Dtest="**/uat/**"
 
 # ❌ 错误：只运行部分测试
-{test_runner} tests/{test_layer}/test_single.py -v
+mvn test -Dtest=SomeSingleTest
 ```
 
-**规则 3：禁止使用 --maxfail 提前终止**
-76|- ❌ `{test_runner} tests/sit/ --maxfail=5` - 只跑 5 个测试就停止
-77|- ✅ `{test_runner} tests/sit/ -v` - 完整执行所有测试用例
+**规则 3：禁止使用 -Dsurefire.skipAfterFailureCount 提前终止**
+- ❌ `mvn test -Dsurefire.skipAfterFailureCount=5` - 只跑 5 个失败就停止
+- ✅ `mvn test` - 完整执行所有测试用例
 78|
 79|### 为什么分层测试如此重要？
 80|
@@ -114,14 +115,14 @@
 115|**可以发布**：产品质量良好，用户体验符合预期。
 116|
 117|### 🟡 黄灯（有条件通过）
-118|- ⚠️ SIT 测试通过率 70-89%
+118|- ⚠️ SIT 测试通过率 70-99%
 119|- ⚠️ 核心功能可用，但存在问题
 120|- ⚠️ 存在 P1 级 Bug（不影响核心功能）
 121|
-122|**可以发布，但需要**：
-123|- 明确已知问题清单
-124|- 制定修复计划
-125|- 监控生产环境表现
+122|**退回开发者，不可发布**：SIT 是集成测试，70% 通过率不满足发布标准。需要：
+123|- 修复失败测试
+124|- Issue 状态改回 `in_progress`
+125|- 修复后重新运行测试至 100%
 126|
 127|### 🔴 红灯（不通过）
 128|- ❌ SIT 测试失败（无法连接基础服务）
@@ -134,28 +135,33 @@
 135|### TDD 的核心价值
 136|
 137|**1. 驱动设计，而不仅是验证**
-138|```python
-139|# TDD 流程：红 → 绿 → 重构
+138|```java
+139|// TDD 流程：红 → 绿 → 重构
 140|
-141|# Step 1: 写测试（红灯）
-142|def test_user_login():
-143|    result = login("user", "pass")
-144|    assert result.success == True
-145|    assert result.token is not None
-146|
-147|# Step 2: 实现功能（绿灯）
-148|def login(username, password):
-149|    # 最简实现，让测试通过
-150|    return LoginResult(success=True, token="abc123")
-151|
-152|# Step 3: 重构优化
-153|def login(username, password):
-154|    # 真实实现，但测试仍然通过
-155|    if authenticate(username, password):
-156|        token = generate_token(username)
-157|        return LoginResult(success=True, token=token)
-158|    return LoginResult(success=False, token=None)
-159|```
+141|// Step 1: 写测试（红灯）
+142|@Test
+143|void testUserLogin() {
+144|    LoginResult result = loginService.login("user", "pass");
+145|    assertTrue(result.isSuccess());
+146|    assertNotNull(result.getToken());
+147|}
+148|
+149|// Step 2: 实现功能（绿灯）
+150|public LoginResult login(String username, String password) {
+151|    // 最简实现，让测试通过
+152|    return new LoginResult(true, "abc123");
+153|}
+154|
+155|// Step 3: 重构优化
+156|public LoginResult login(String username, String password) {
+157|    // 真实实现，但测试仍然通过
+158|    if (authService.authenticate(username, password)) {
+159|        String token = tokenGenerator.generate(username);
+160|        return new LoginResult(true, token);
+161|    }
+162|    return new LoginResult(false, null);
+163|}
+164|```
 160|
 161|**2. 文档即测试**
 162|- 测试用例 = 活的文档
@@ -204,34 +210,40 @@
 205|### 测试用例设计方法论
 206|
 207|**边界值分析**：
-208|```python
-209|# ❌ 错误：只测试正常值
-210|def test_age_validation():
-211|    assert validate_age(25) == True
-212|
-213|# ✅ 正确：测试边界值
-214|def test_age_validation():
-215|    assert validate_age(-1) == False    # 最小值外
-216|    assert validate_age(0) == True     # 最小值
-217|    assert validate_age(18) == True    # 正常值
-218|    assert validate_age(150) == True   # 最大值
-219|    assert validate_age(151) == False  # 最大值外
-220|```
+208|```java
+209|// ❌ 错误：只测试正常值
+210|@Test
+211|void testAgeValidation() {
+212|    assertTrue(ageValidator.validate(25));
+213|}
+214|
+215|// ✅ 正确：测试边界值
+216|@Test
+217|void testAgeValidation_BoundaryValues() {
+218|    assertFalse(ageValidator.validate(-1));   // 最小值外
+219|    assertTrue(ageValidator.validate(0));     // 最小值
+220|    assertTrue(ageValidator.validate(18));    // 正常值
+221|    assertTrue(ageValidator.validate(150));   // 最大值
+222|    assertFalse(ageValidator.validate(151));  // 最大值外
+223|}
+224|```
 221|
 222|**等价类划分**：
-223|```python
-224|# ✅ 每个等价类至少一个测试用例
-225|def test_username_validation():
-226|    # 有效等价类
-227|    assert validate_username("abc") == True
-228|    assert validate_username("user123") == True
-229|    
-230|    # 无效等价类
-231|    assert validate_username("") == False      # 空字符串
-232|    assert validate_username("a") == False     # 太短
-233|    assert validate_username("a"*100) == False # 太长
-234|    assert validate_username("123") == False   # 纯数字
-235|```
+223|```java
+224|// ✅ 每个等价类至少一个测试用例
+225|@Test
+226|void testUsernameValidation() {
+227|    // 有效等价类
+228|    assertTrue(usernameValidator.validate("abc"));
+229|    assertTrue(usernameValidator.validate("user123"));
+230|
+231|    // 无效等价类
+232|    assertFalse(usernameValidator.validate(""));          // 空字符串
+233|    assertFalse(usernameValidator.validate("a"));         // 太短
+234|    assertFalse(usernameValidator.validate("a".repeat(100))); // 太长
+235|    assertFalse(usernameValidator.validate("123"));       // 纯数字
+236|}
+237|```
 236|
 237|---
 238|
@@ -244,57 +256,73 @@
 245|### 测试策略四阶段
 246|
 247|**1. 测试开始前：全局清理**
-248|```python
-249|@pytest.fixture(scope="session", autouse=True)
-250|def global_cleanup(k8s_client, db_connection):
-251|    """测试会话级别的全局清理（幂等操作）"""
-252|    print("🧹 全局清理：清理所有 test-* 数据")
-253|    clean_k8s_resources(k8s_client, "test-")
-254|    clean_db_data(db_connection, "test-%")
-255|    yield
-256|    clean_k8s_resources(k8s_client, "test-")
-257|    clean_db_data(db_connection, "test-%")
-258|```
+248|```java
+249|// JUnit 5: 使用 @BeforeAll/@AfterAll 进行会话级清理
+250|@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+251|class SitIntegrationTest {
+252|
+253|    @BeforeAll
+254|    static void globalCleanup() {
+255|        // 测试会话级别的全局清理（幂等操作）
+256|        System.out.println("🧹 全局清理：清理所有 test-* 数据");
+257|        cleanK8sResources("test-");
+258|        cleanDbData("test-%");
+259|    }
+260|
+261|    @AfterAll
+262|    static void afterAllCleanup() {
+263|        cleanK8sResources("test-");
+264|        cleanDbData("test-%");
+265|    }
+266|}
+267|```
 259|
 260|**2. 数据准备阶段：独立命名**
-261|```python
-262|@pytest.mark.sit
-263|def test_sit_002_pod_add_event():
-264|    pod_name = "test-sit-002-pod-add"  # ✅ 独立命名，避免冲突
-265|```
+261|```java
+262|@Test
+263|@DisplayName("SIT-002: Pod 添加事件")
+264|void testSit002PodAddEvent() {
+265|    String podName = "test-sit-002-pod-add"; // ✅ 独立命名，避免冲突
+266|}
+267|```
 266|
 267|**命名规范**：
 268|- 格式：`test-{layer}-{编号}-{用途描述}`
 269|- 示例：`test-sit-002-pod-add`, `test-uat-001-lifecycle`
 270|
 271|**3. 测试执行阶段：数据隔离**
-272|```python
-273|# ✅ 正确：每个测试用例使用独立名称
-274|def test_case_001():
-275|    name = "test-case-001-action"
-276|
-277|def test_case_002():
-278|    name = "test-case-002-action"
-279|
-280|# ❌ 错误：多个测试用例共享名称
-281|def test_case_001(shared_name):  # 共享 fixture → 冲突！
-282|```
+272|```java
+273|// ✅ 正确：每个测试用例使用独立名称
+274|@Test
+275|void testCase001() {
+276|    String name = "test-case-001-action";
+277|}
+278|
+279|@Test
+280|void testCase002() {
+281|    String name = "test-case-002-action";
+282|}
+283|
+284|// ❌ 错误：多个测试用例共享同一状态
+285|// 避免使用共享的静态变量或 @TestInstance(PER_CLASS) 时的实例变量
+286|```
 283|
 284|**4. 测试结束后：自动清理**
-285|```python
-286|@pytest.fixture(scope="session", autouse=True)
-287|def global_cleanup(k8s_client, db_connection):
-288|    yield
-289|    # ✅ 自动清理所有 test-* 数据（无论测试成功/失败）
-290|    clean_k8s_resources(k8s_client, "test-")
-291|    clean_db_data(db_connection, "test-%")
-292|```
+285|```java
+286|// JUnit 5: @AfterAll 自动清理（无论测试成功/失败）
+287|@AfterAll
+288|static void globalCleanup() {
+289|    // ✅ 自动清理所有 test-* 数据
+290|    cleanK8sResources("test-");
+291|    cleanDbData("test-%");
+292|}
+293|```
 293|
 294|### 幂等性保障机制
 295|
 296|| 保护机制 | 作用范围 | 实现方式 |
 297||---------|---------|----------|
-298|| **全局清理** | 测试会话级别 | `global_cleanup` fixture（scope="session"） |
+298|| **全局清理** | 测试会话级别 | `@BeforeAll` / `@AfterAll` 静态方法 |
 299|| **K8s 清理** | 集群资源 | 清理所有 test-* 资源 |
 300|| **数据库清理** | 持久化数据 | 清理所有 test-% 记录 |
 301|| **独立命名** | 测试用例级别 | 每个用例使用独立名称 |
@@ -309,10 +337,10 @@
 310|```bash
 311|# ❌ 非幂等：每次运行前需要手动清理
 312|rm -rf test_data/*
-313|pytest tests/sit/
+313|mvn test -Dtest="**/sit/**"
 314|
 315|# ✅ 幂等：直接运行，自动清理
-316|pytest tests/sit/
+316|mvn test -Dtest="**/sit/**"
 317|```
 318|
 319|**3. 并行测试的基础**
@@ -333,53 +361,55 @@
 334|### 正确实现
 335|
 336|**✅ 完整清理（所有相关表）**：
-337|```python
-338|def _cleanup_test_data(db_connection, pattern):
-339|    """清理测试数据（使用事务）"""
-340|    with db_connection.cursor() as cur:
-341|        try:
-342|            cur.execute("BEGIN")
-343|            # 删除顺序：子表 → 主表（考虑外键依赖）
-344|            cur.execute("DELETE FROM {child_table} WHERE name LIKE %s", (pattern,))
-345|            cur.execute("DELETE FROM {main_table} WHERE name LIKE %s", (pattern,))
-346|            db_connection.commit()
-347|        except Exception as e:
-348|            db_connection.rollback()
-349|            raise e
-350|```
-351|
-352|**说明**:
-353|- `{child_table}`: 子表名称
-354|- `{main_table}`: 主表名称
-355|
-356|**✅ 幂等操作（测试前后都清理）**：
-357|```python
-358|@pytest.fixture(autouse=True)
-359|def cleanup_test_data(db_connection, test_pattern):
-360|    # 测试前清理：确保环境干净（关键！）
-361|    _cleanup_test_data(db_connection, test_pattern)
-362|    yield
-363|    # 测试后清理：避免数据残留
-364|    _cleanup_test_data(db_connection, test_pattern)
-365|```
+337|```java
+338|void cleanupTestData(String pattern) {
+339|    // 清理测试数据（使用事务）
+340|    try (Connection conn = dataSource.getConnection()) {
+341|        conn.setAutoCommit(false);
+342|        try (Statement stmt = conn.createStatement()) {
+343|            // 删除顺序：子表 → 主表（考虑外键依赖）
+344|            stmt.executeUpdate("DELETE FROM child_table WHERE name LIKE '" + pattern + "'");
+345|            stmt.executeUpdate("DELETE FROM main_table WHERE name LIKE '" + pattern + "'");
+346|            conn.commit();
+347|        } catch (SQLException e) {
+348|            conn.rollback();
+349|            throw e;
+350|        }
+351|    }
+352|}
+353|```
+354|
+355|**✅ 幂等操作（测试前后都清理）**：
+356|```java
+357|// JUnit 5: @BeforeEach + @AfterEach 保证测试前后清理
+358|@BeforeEach
+359|void setUp() {
+360|    cleanupTestData("test-%"); // 测试前清理
+361|}
+362|
+363|@AfterEach
+364|void tearDown() {
+365|    cleanupTestData("test-%"); // 测试后清理
+366|}
+367|```
 366|
 367|### 关键检查清单
 368|
-369|- [ ] **测试前清理**：fixture 在 yield 之前执行
-370|- [ ] **测试后清理**：fixture 在 yield 之后执行
+369|- [ ] **测试前清理**：`@BeforeEach` 在测试前执行
+370|- [ ] **测试后清理**：`@AfterEach` 在测试后执行
 371|- [ ] **完整清理**：清理所有相关表
 372|- [ ] **使用事务**：多表操作使用 BEGIN/COMMIT/ROLLBACK
 373|- [ ] **考虑外键**：按照依赖顺序删除（子表 → 主表）
 374|
 375|---
 376|
-377|## ⚡ pytest xfail/xpassed 实践策略
+377|## ⚡ @Disabled / Assumptions 实践策略
 378|
 379|### 核心概念
 380|
-381|**xfail（expected failure）**：标记预期失败的测试，用于未实现功能、已知 Bug、环境限制等场景
+381|**@Disabled（预期跳过）**：标记预期跳过或暂时禁用的测试，用于未实现功能、已知 Bug、环境限制等场景
 382|
-383|**xpassed（unexpectedly passed）**：标记为 xfail 但实际通过，表明功能已实现或环境已修复
+383|**Assumptions（条件跳过）**：当假设不满足时跳过测试而非失败，用于环境依赖检查
 384|
 385|### TDD 实践策略
 386|
@@ -388,31 +418,31 @@
 389|- 依赖阻塞：等待外部依赖修复
 390|- 环境限制：当前环境无法支持
 391|
-392|**xpassed 处理流程**：
-393|1. 识别 xpassed 测试：`pytest -v | grep XPASS`
+392|**@Disabled 移除流程**：
+393|1. 识别已可启用的测试：`mvn test -Dtest="**" | grep "Tests skipped"`
 394|2. 验证功能正确性
-395|3. 移除 xfail 标记
+395|3. 移除 @Disabled 标记
 396|4. 更新测试基线
 397|
 398|### 最佳实践
 399|
 400|**DO**：
 401|- ✅ reason 清晰：说明预期失败的根本原因
-402|- ✅ 及时清理：xpassed 后立即移除标记
-403|- ✅ 定期审查：避免 xfail 过期失去跟踪价值
+402|- ✅ 及时清理：功能可用后立即移除 @Disabled 标记
+403|- ✅ 定期审查：避免 @Disabled 过期失去跟踪价值
 404|
 405|**DON'T**：
-406|- ❌ 滥用掩盖：不要用 xfail 掩盖应该修复的问题
-407|- ❌ 模糊描述：避免 "todo"、"待修复" 等无意义 reason
-408|- ❌ 长期遗留：定期处理 xpassed，保持测试准确性
+406|- ❌ 滥用掩盖：不要用 @Disabled 掩盖应该修复的问题
+407|- ❌ 模糊描述：避免 "TODO"、"待修复" 等无意义 reason
+408|- ❌ 长期遗留：定期处理已启用的测试，保持测试准确性
 409|
 410|### 统计规则
 411|
-412|**通过率计算**：`pass_rate = (passed + xpassed) / total_tests`
+412|**通过率计算**：`pass_rate = (passed) / (total_tests - disabled)`
 413|
 414|**质量指标**：
-415|- xpassed 数量反映功能实现进度
-416|- 及时处理 xpassed 保持测试有效性
+415|- @Disabled 数量反映功能实现进度
+416|- 及时移除已可用的 @Disabled 保持测试有效性
 417|
 418|---
 419|
