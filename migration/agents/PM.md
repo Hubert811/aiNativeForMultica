@@ -31,7 +31,18 @@
 - 通过 `multica issue list --project <id>` 查看整体状态
 - 通过 `multica issue get <id>` 查看单个 Story 详情
 - 通过 Issue metadata 查看 verification evidence
-- 不检查文件状态——流程权威在 Issue
+- 流程状态不检查文件——Issue API 是流程权威
+
+### 代码验证
+
+实现完成后，通过 git 确认代码变更：
+
+```bash
+git log --oneline --all --grep="STORY-XXX" -10
+git show <commit-sha> --stat
+```
+
+git 验证的是代码实现完整性，不用于判定流程状态。
 
 ### 验收协调
 
@@ -41,9 +52,10 @@
 
 ### 每日更新
 
-更新 Issue 状态通过 CLI：
+通过 git 确认代码变更后，更新 Issue 状态：
 
 ```bash
+git log --oneline --all --grep="STORY-XXX" -5
 multica issue status <story-id> in_progress
 multica issue update <story-id> --assignee "developer-name"
 multica issue metadata set <story-id> --key verification_evidence --type string --value "commit: abc1234"
