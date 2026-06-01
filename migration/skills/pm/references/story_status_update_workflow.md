@@ -1,12 +1,27 @@
 # Story 状态更新工作流
 
-## 状态流转
+## 双层状态模型
 
-使用 Multica Issue 原生状态：
+- **`status`**（骨架）：Multica Issue 原生状态，表达宏观进度
+  ```
+  todo → in_progress → in_review → done
+  ```
+- **`phase`**（血肉）：metadata 细粒度流程阶段
+  ```
+  writing → reviewing → ac_review → testing
+  ```
 
-```
-todo → in_progress → in_review → done
-```
+### 状态映射
+
+| Scrum 阶段 | `status` | `metadata.phase` |
+|------------|----------|-------------------|
+| 开发 Story | `in_progress` | `"writing"` |
+| 提交代码审查 | `in_review` | `"reviewing"` |
+| AC 验收中 | `in_review` | `"ac_review"` |
+| 测试中 | `in_review` | `"testing"` |
+| Story 完成 | `done` | *(删除)* |
+
+> 原则：中间 phase 变化不碰 status，只有 phase 走到终态时才同步更新 status。
 
 ## 代码验证（状态更新前）
 
@@ -32,6 +47,7 @@ git diff <base-branch>...<feature-branch> --stat
 
 ```bash
 multica issue status <story-id> in_progress
+multica issue metadata set <story-id> --key phase --value writing
 multica issue update <story-id> --assignee "developer-name"
 ```
 
@@ -39,19 +55,21 @@ multica issue update <story-id> --assignee "developer-name"
 
 ```bash
 multica issue status <story-id> in_review
+multica issue metadata set <story-id> --key phase --value reviewing
 multica issue metadata set <story-id> --key verification_evidence --type string --value "commit: abc1234"
 ```
 
-### 测试阶段（通过 metadata 标记）
+### AC 验收通过，进入测试
 
 ```bash
-multica issue metadata set <story-id> --key testing --type bool --value true
+multica issue metadata set <story-id> --key phase --value testing
 ```
 
 ### 完成
 
 ```bash
 multica issue status <story-id> done
+multica issue metadata delete <story-id> --key phase
 multica issue metadata set <story-id> --key qa_status --type string --value "green"
 ```
 
@@ -71,6 +89,7 @@ multica issue metadata set <story-id> --key qa_status --type string --value "gre
 
 ```bash
 multica issue status <story-id> in_progress
+multica issue metadata set <story-id> --key phase --value writing
 ```
 
 在 Issue comment 中说明退回原因。

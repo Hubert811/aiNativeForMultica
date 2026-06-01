@@ -60,28 +60,57 @@ epic: "EPIC-001"
 
 ## 状态流转
 
-Story 状态使用 Multica Issue 原生状态：
+Story 状态采用**双层状态模型**：
 
-```
-todo → in_progress → in_review → done
-```
+- **Layer 1（骨架）**：Multica Issue 原生 `status`，表达宏观进度
+  ```
+  todo → in_progress → in_review → done
+  ```
+- **Layer 2（血肉）**：Issue metadata `phase`，表达 Scrum 流程细粒度阶段
+  ```
+  writing → reviewing → ac_review → testing
+  ```
 
-### 测试阶段标记
+### 状态映射
 
-Testing 阶段通过 Issue metadata 标记，而不是单独的状态：
-
-```bash
-multica issue metadata set <story-id> --key testing --value true --type bool
-```
+| Scrum 阶段 | `status` | `metadata.phase` |
+|------------|----------|-------------------|
+| 开发 Story | `in_progress` | `"writing"` |
+| 提交代码审查 | `in_review` | `"reviewing"` |
+| AC 验收中 | `in_review` | `"ac_review"` |
+| 测试中 | `in_review` | `"testing"` |
+| Story 完成 | `done` | *(删除或清空)* |
 
 ### 状态流转条件
 
 | 从状态 | 到状态 | 条件 |
 |---|---|---|
-| todo | in_progress | 开发者开始工作 |
-| in_progress | in_review | 代码已提交，等待 review |
-| in_review | done | AC 全部通过，review 完成 |
-| in_review | in_progress | review 不通过，需要修改 |
+| todo | in_progress | 开发者开始工作，设置 `phase = "writing"` |
+| in_progress | in_review | 代码已提交，设置 `phase = "reviewing"` |
+| in_review | in_review (phase 流转) | AC 验收通过，设置 `phase = "ac_review"` → `"testing"` |
+| in_review | done | AC 全部通过 + testing 通过，删除 `phase` |
+| in_review | in_progress | review 不通过或测试失败，退回 `phase = "writing"` |
+
+### 操作方法
+
+```bash
+# 开始开发
+multica issue status <story-id> in_progress
+multica issue metadata set <story-id> --key phase --value writing
+
+# 提交审查
+multica issue status <story-id> in_review
+multica issue metadata set <story-id> --key phase --value reviewing
+
+# AC 验收通过，进入测试
+multica issue metadata set <story-id> --key phase --value testing
+
+# Story 完成
+multica issue status <story-id> done
+multica issue metadata delete <story-id> --key phase
+```
+
+> **原则**：中间 phase 变化不碰 status，只有 phase 走到终态时才同步更新 status。
 
 ### Verification Evidence
 
