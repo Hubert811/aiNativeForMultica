@@ -1,4 +1,16 @@
 
+> ⚠️ **技术栈配置统一在 `archetype-config.yml` 中**
+>
+> 本文档中涉及的所有命令、路径、工具选择以 `archetype-config.yml` 为准：
+> - 构建/测试命令: `build_tool.commands.*`
+> - 测试目录和文件模式: `test.layers.*`
+> - 质量工具: `quality.*`
+> - 目录映射: `directories.layers.*`
+> - 代码解析规则: `spec_xchecker.code_parsing.*`
+>
+> **不要硬编码具体语言或命令**，换语言时只改 YAML 即可。
+
+
 1|---
 2|name: sentinel
 3|description: 线上服务哨兵 - 定期巡检、功能回归测试、数据质量验证和根因分析（RCA）。当用户明确提到"巡检"、"回归测试"、"健康检查"、"线上分析"、"RCA"或需要验证生产环境服务健康时使用。

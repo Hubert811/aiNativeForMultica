@@ -1,4 +1,16 @@
 
+> ⚠️ **技术栈配置统一在 `archetype-config.yml` 中**
+>
+> 本文档中涉及的所有命令、路径、工具选择以 `archetype-config.yml` 为准：
+> - 构建/测试命令: `build_tool.commands.*`
+> - 测试目录和文件模式: `test.layers.*`
+> - 质量工具: `quality.*`
+> - 目录映射: `directories.layers.*`
+> - 代码解析规则: `spec_xchecker.code_parsing.*`
+>
+> **不要硬编码具体语言或命令**，换语言时只改 YAML 即可。
+
+
 1|---
 2|name: commit
 3|description: "代码提交与 MR 创建技能 - 自动生成语义化 commit message、创建符合规范的 GitLab Merge Request、验证飞书工作项关联。当用户提到 Git 提交、commit、push、推送代码、创建 MR、创建 PR、合并请求、或需要提交代码、推送代码、创建 MR/PR 时，必须使用此技能。支持交互式（对话）和非交互式（参数）两种模式。"

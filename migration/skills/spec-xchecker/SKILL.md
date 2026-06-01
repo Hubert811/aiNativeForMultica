@@ -1,3 +1,15 @@
+
+> ⚠️ **技术栈配置统一在 `archetype-config.yml` 中**
+>
+> 本文档中涉及的所有命令、路径、工具选择以 `archetype-config.yml` 为准：
+> - 构建/测试命令: `build_tool.commands.*`
+> - 测试目录和文件模式: `test.layers.*`
+> - 质量工具: `quality.*`
+> - 目录映射: `directories.layers.*`
+> - 代码解析规则: `spec_xchecker.code_parsing.*`
+>
+> **不要硬编码具体语言或命令**，换语言时只改 YAML 即可。
+
 1|---
 2|name: spec-xchecker
 3|description: "四路交叉验证工具 - 检查 Design Spec ↔ Scrum ↔ Code ↔ Tests 对齐一致性。当用户需要验证代码实现是否符合设计文档、Story AC 是否完整、测试覆盖率是否达标、Story 开发完成检查、MR 前验证、代码审查一致性验证时，必须使用此技能。适用于开发阶段的质量保证，防止设计文档与实现不一致的事故。⚠️ 实验性质技能，建议结合人工审查使用。"
