@@ -78,7 +78,15 @@ multica issue metadata set <story-id> --key story_doc --type string --value "doc
 
 ### Step 4: 状态更新
 
-开发者完成工作后，通过 CLI 更新状态：
+开发者完成工作后，先通过 git 验证代码变更：
+
+```bash
+# 确认提交与 Story 匹配
+git log --oneline --all --grep="STORY-XXX" -10
+git show <commit-sha> --stat
+```
+
+代码验证通过后，通过 CLI 更新状态：
 
 ```bash
 multica issue status <story-id> in_review
@@ -93,6 +101,12 @@ multica issue metadata set <story-id> --key testing --type bool --value true
 ```
 
 ### Step 5: 验收验证
+
+通过 git 确认代码已合入目标分支：
+
+```bash
+git log --oneline <target-branch> --grep="STORY-XXX"
+```
 
 QA 验证 AC 通过后：
 
