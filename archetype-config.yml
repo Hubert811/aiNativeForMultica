@@ -1,0 +1,369 @@
+# ═══════════════════════════════════════════════════════════
+# archetype-config.yml — AI-Native 原型工程全局配置
+# ═══════════════════════════════════════════════════════════
+# 所有 skill、脚本、文档中的技术栈相关配置统一从这里读取。
+# 换语言/换构建工具时，只改这一个文件。
+# ═══════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────
+# 1. 语言和构建工具
+# ───────────────────────────────────────────────────────────
+language:
+  # go | java | python | node | rust
+  name: java
+
+  # 版本约束（用于 skill 文档中的占位替换）
+  version_min: "17"
+
+  # 命名规范
+  naming:
+    file_suffix: ".java"              # 源文件后缀
+    test_suffix: "Test.java"           # 测试文件后缀（*Test.java）
+    test_class_prefix: ""              # 测试类前缀（Go 无，Java 无，Python 用 test_）
+    identifier_case: camelCase         # 变量/方法：camelCase | snake_case
+    class_case: PascalCase             # 类名：PascalCase
+    constant_case: UPPER_SNAKE_CASE    # 常量
+    package_case: lowercase            # 包名
+
+# ───────────────────────────────────────────────────────────
+# 2. 构建工具
+# ───────────────────────────────────────────────────────────
+build_tool:
+  # maven | gradle | make | npm | cargo
+  name: maven
+
+  # 各阶段命令（skill 和脚本直接引用）
+  commands:
+    compile:    "mvn compile"
+    test:       "mvn test"
+    package:    "mvn package -DskipTests"
+    build:      "mvn package"
+    run:        "mvn spring-boot:run"
+    format:     "mvn spotless:apply"
+    lint:       "mvn checkstyle:check"
+    clean:      "mvn clean"
+    install:    "mvn install -DskipTests"
+    coverage:   "mvn jacoco:report"
+    verify:     "mvn verify"
+
+  # 构建产物
+  artifact:
+    type: jar                          # jar | war | binary | docker
+    output_dir: target
+    output_pattern: "*.jar"
+
+# ───────────────────────────────────────────────────────────
+# 3. 目录结构映射（skill 中的路径引用此配置）
+# ───────────────────────────────────────────────────────────
+directories:
+  # 源码根
+  source_root: "src/main/java"
+
+  # 各层目录（相对于 source_root，skill 中用 {source_root}/{layer_dir} 拼接）
+  layers:
+    controller:  "com/example/controller"    # Handler → Controller
+    service:     "com/example/service"        # Logic → Service
+    repository:  "com/example/repository"     # DAO → Repository
+    entity:      "com/example/entity"         # Model → Entity
+    dto:         "com/example/dto"            # types → DTO/VO
+    config:      "com/example/config"         # config → Config
+    filter:      "com/example/filter"         # middleware → Filter/Interceptor
+    util:        "com/example/util"           # pkg → Utils
+
+  # 配置文件
+  config:
+    root: "src/main/resources"
+    base: "application.yml"
+    profiles:
+      dev:  "application-dev.yml"
+      test: "application-test.yml"
+      prod: "application-prod.yml"
+
+  # 文档目录（不变，所有语言共用）
+  docs:
+    design:  "docs/design"
+    scrum:   "docs/scrum"
+    guides:  "docs/guides"
+
+# ───────────────────────────────────────────────────────────
+# 4. 测试框架
+# ───────────────────────────────────────────────────────────
+test:
+  # ut | junit | pytest | jest
+  unit_framework: junit
+
+  # 各层测试配置
+  layers:
+    ut:
+      dir: "src/test/java"
+      file_pattern: "*Test.java"
+      run_command: "mvn test"
+      coverage_tool: jacoco
+      coverage_report: "target/site/jacoco/index.html"
+
+    api:
+      dir: "src/test/java"
+      file_pattern: "*ApiTest.java"
+      run_command: "mvn test -Dtest=\"*ApiTest\""
+      framework: mockmvc               # mockmvc | rest-assured | pytest
+      # 如果用 pytest（外部 API 契约测试）
+      pytest_fallback:
+        dir: "tests/api"
+        file_pattern: "test_*.py"
+        run_command: "pytest tests/api/ -v"
+
+    sit:
+      dir: "src/test/java"
+      file_pattern: "*SitTest.java"
+      run_command: "mvn test -Dtest=\"*SitTest\""
+      framework: spring-boot-test      # spring-boot-test | pytest
+      needs_db: true                   # 是否需要真实数据库
+      db_tool: testcontainers          # testcontainers | docker-compose
+
+    uat:
+      dir: "src/test/java"
+      file_pattern: "*UatTest.java"
+      run_command: "mvn test -Dtest=\"*UatTest\""
+      framework: cucumber              # cucumber | pytest
+      # 如果用 pytest
+      pytest_fallback:
+        dir: "tests/uat"
+        file_pattern: "test_*.py"
+        run_command: "pytest tests/uat/ -v"
+
+  # 覆盖率目标
+  coverage_targets:
+    ut: 50       # %  单元测试
+    api: 100     # %  API 契约
+    sit: 90      # %  集成测试
+    uat: 85      # %  验收测试
+    logic_layer: 80    # Service/Logic 层最低覆盖率
+    dao_layer: 20      # Repository/DAO 层最低覆盖率（不计入总体）
+
+# ───────────────────────────────────────────────────────────
+# 5. 代码质量工具
+# ───────────────────────────────────────────────────────────
+quality:
+  formatter:
+    tool: spotless
+    command: "mvn spotless:apply"
+
+  linter:
+    - tool: checkstyle
+      command: "mvn checkstyle:check"
+      config: "checkstyle.xml"
+
+    - tool: spotbugs
+      command: "mvn spotbugs:check"
+      threshold: medium              # low | medium | high
+
+    - tool: pmd
+      command: "mvn pmd:check"
+
+  # MR 前的质量门禁
+  gates:
+    format_pass: true                # 格式化必须通过
+    lint_pass: true                  # lint 必须通过
+    ut_pass: true                    # 单测必须通过
+    coverage_min: 50                 # 最低覆盖率 %
+
+# ───────────────────────────────────────────────────────────
+# 6. Git 和 MR
+# ───────────────────────────────────────────────────────────
+git:
+  # 分支策略
+  branch_prefix: "feat/"             # 功能分支前缀
+  branch_format: "feat/{story-id}-{slug}"
+
+  # Commit 规范
+  commit_types:
+    - feat      # 新功能
+    - fix       # Bug 修复
+    - refactor  # 重构
+    - test      # 测试相关
+    - docs      # 文档
+    - chore     # 构建/工具
+    - ci        # CI/CD
+
+  # MR 模板目录
+  mr_templates: ".claude/skills/commit/references/mr-templates"
+
+# ───────────────────────────────────────────────────────────
+# 7. Spec-XChecker（四路交叉验证）
+# ───────────────────────────────────────────────────────────
+spec_xchecker:
+  # 检查模式
+  modes:
+    quick:
+      timeout: 1
+      layers: ["ds"]                 # 只检查 Design Spec ↔ Scrum
+    medium:
+      timeout: 10
+      layers: ["ds", "sc"]           # + Scrum ↔ Code
+    deep:
+      timeout: 60
+      layers: ["ds", "sc", "ct", "st"]  # 全量
+
+  # 文件识别（脚本用这些正则匹配文件）
+  file_patterns:
+    source:
+      - "**/*.java"
+      - "**/*.xml"                   # pom.xml, mapper.xml
+    test:
+      - "**/*Test.java"
+      - "**/*ApiTest.java"
+      - "**/*SitTest.java"
+      - "**/*UatTest.java"
+    config:
+      - "**/*.yml"
+      - "**/*.yaml"
+      - "**/*.properties"
+
+  # 代码解析规则（用于 SC 层：Scrum AC ↔ Code 检查）
+  code_parsing:
+    # 方法签名正则（用于判断某个函数是否存在）
+    method_pattern: "(public|private|protected)\\s+\\S+\\s+\\w+\\s*\\("
+
+    # 测试方法签名
+    test_method_pattern: "@Test\\s+(void|public)\\s+\\w+\\s*\\("
+
+    # 注解检测
+    annotations:
+      rest_controller: "@RestController"
+      service: "@Service"
+      repository: "@Repository"
+      entity: "@Entity"
+      test: "@Test"
+      test_method: "@Test"
+
+    # import 检测
+    import_pattern: "^import\\s+"
+
+  # Story 文档配置
+  story:
+    base_dir: "docs/scrum/story"
+    file_pattern: "story-{story_id}-*.md"
+
+  # 设计文档配置
+  design_spec:
+    base_dir: "docs/design"
+    file_pattern: "*_design_v*.md"
+    version_pattern: "v(\\d+)\\.(\\d+)(?:\\.(\\d+))?"
+
+  # 输出
+  output:
+    base_dir: "/tmp/xchecker"
+    formats: ["markdown", "json"]
+
+# ───────────────────────────────────────────────────────────
+# 8. 部署
+# ───────────────────────────────────────────────────────────
+deploy:
+  # Docker
+  docker:
+    base_image: "eclipse-temurin:17-jre"  # Java 用 temurin，Go 用 alpine
+    dockerfile: "Dockerfile"
+    compose_file: "deploy/docker/docker-compose.yml"
+
+  # K8s
+  k8s:
+    helm_dir: "deploy/k8s/helm"
+    chart_name: "project-template"
+    values_test: "values-test.yaml"
+    values_prod: "values-prod.yaml"
+
+  # 镜像标签策略
+  image_tags:
+    snapshot: "snapshot-mr-{mr_iid}"   # 测试环境
+    release: "{sem_ver}-{timestamp}-{sha}"  # 生产环境
+
+  # 发布流程（7 阶段，不变）
+  stages:
+    - name: "本地开发"
+      command: "mvn spring-boot:run"
+      verify: "mvn test"
+    - name: "提测（MR）"
+      command: "git push origin {branch}"
+      verify: "CI 构建快照镜像"
+    - name: "测试环境验证"
+      command: "helm upgrade test {chart} -f {values_test}"
+      verify: "QA 回归测试"
+    - name: "生产构建"
+      command: "MR 合并 → CI 构建生产镜像"
+      verify: "镜像签名"
+    - name: "生产发布"
+      command: "helm upgrade prod {chart} -f {values_prod}"
+      verify: "Human Review + 灰度"
+    - name: "生产验证"
+      command: "生产环境回归测试"
+      verify: "性能验证"
+    - name: "日常巡检"
+      command: "Sentinel 巡检"
+      verify: "健康报告"
+
+# ───────────────────────────────────────────────────────────
+# 9. 框架特定配置（按需启用）
+# ───────────────────────────────────────────────────────────
+framework:
+  # ── Spring Boot ──
+  spring_boot:
+    version: "3.2"
+    web: true                    # 是否 web 项目
+    data_jpa: true               # 是否用 JPA
+    mybatis: false               # 是否用 MyBatis
+    security: true               # 是否用 Spring Security
+    actuator: true               # 是否用 Actuator
+
+  # ── Go (go-zero) — 如果语言是 go 则启用 ──
+  go_zero:
+    version: "1.7"
+    enabled: false
+
+  # ── Simple Admin — 如果项目用 Simple Admin 微服务框架则启用 ──
+  simple_admin:
+    enabled: false               # ⚠️ 非 Simple Admin 项目必须设为 false
+    # 以下为 Simple Admin 专属命令（enabled=true 时才用）
+    commands:
+      gen_ent: "make {service}-gen-ent"
+      gen_rpc: "make {service}-gen-rpc-ent-logic model={model} group={group}"
+      gen_api: "make core-gen-api-from-rpc"
+      gen_frontend: "m-goctls frontend vben5"
+
+# ───────────────────────────────────────────────────────────
+# 10. 角色 Skill 启用列表
+# ───────────────────────────────────────────────────────────
+# 决定哪些角色参与本项目。不需要的角色 enabled=false。
+roles:
+  arch:
+    enabled: true
+    skill_dir: ".claude/skills/arch"
+  pm:
+    enabled: true
+    skill_dir: ".claude/skills/pm"
+  dev:
+    enabled: true
+    skill_dir: ".claude/skills/dev"
+  qa:
+    enabled: true
+    skill_dir: ".claude/skills/qa"
+  devops:
+    enabled: true
+    skill_dir: ".claude/skills/devops"
+  ued:
+    enabled: false               # 无前端则关闭
+    skill_dir: ".claude/skills/ued"
+  sentinel:
+    enabled: true
+    skill_dir: ".claude/skills/sentinel"
+  refactor:
+    enabled: true
+    skill_dir: ".claude/skills/refactor"
+  commit:
+    enabled: true
+    skill_dir: ".claude/skills/commit"
+  spec_xchecker:
+    enabled: true
+    skill_dir: ".claude/skills/spec-xchecker"
+  simple_admin_workflow:
+    enabled: false               # ⚠️ 非 Simple Admin 必须 false
+    skill_dir: ".claude/skills/simple-admin-workflow"

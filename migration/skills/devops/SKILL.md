@@ -1,3 +1,15 @@
+
+> ⚠️ **技术栈配置统一在 `archetype-config.yml` 中**
+>
+> 本文档中涉及的所有命令、路径、工具选择以 `archetype-config.yml` 为准：
+> - 构建/测试命令: `build_tool.commands.*`
+> - 测试目录和文件模式: `test.layers.*`
+> - 质量工具: `quality.*`
+> - 目录映射: `directories.layers.*`
+> - 代码解析规则: `spec_xchecker.code_parsing.*`
+>
+> **不要硬编码具体语言或命令**，换语言时只改 YAML 即可。
+
 1|---
 2|skill: "devops"
 3|description: "DevOps 工作技能 - CI/CD 流程、容器化构建、Kubernetes 部署、基础设施即代码、监控告警。当用户提到部署、容器化、K8s、Helm、ArgoCD、CI/CD、监控、日志、或需要执行部署、排查线上问题时，必须使用此技能。"

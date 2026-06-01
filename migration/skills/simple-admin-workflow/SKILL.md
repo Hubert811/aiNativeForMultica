@@ -3,6 +3,18 @@ name: simple-admin-workflow
 description: Simple Admin 完整开发工作流指导技能,涵盖从 Ent Schema 定义到 RPC 服务、API 网关、前端页面的全链路开发。当用户进行以下操作时使用此技能:(1) 开发新功能、新增字段、修改数据模型,(2) 创建或修改微服务的任何环节(Ent/RPC/API/前端),(3) 进行 CRUD 开发、接口开发、页面开发,(4) 需要使用 m-goctls 工具生成代码,(5) 在 Simple Admin 项目中进行任何开发工作。此技能提供完整的工作流指导,包括命令使用、文件修改规则、常见问题排查等。
 ---
 
+> ⚠️ **技术栈配置统一在 `archetype-config.yml` 中**
+>
+> 本文档中涉及的所有命令、路径、工具选择以 `archetype-config.yml` 为准：
+> - 构建/测试命令: `build_tool.commands.*`
+> - 测试目录和文件模式: `test.layers.*`
+> - 质量工具: `quality.*`
+> - 目录映射: `directories.layers.*`
+> - 代码解析规则: `spec_xchecker.code_parsing.*`
+>
+> **不要硬编码具体语言或命令**，换语言时只改 YAML 即可。
+
+
 # Simple Admin 完整开发工作流
 
 ## 概述
