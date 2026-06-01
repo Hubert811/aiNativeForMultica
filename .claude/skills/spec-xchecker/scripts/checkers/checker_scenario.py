@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import List
 from dataclasses import dataclass
 
+from lib.config_loader import load_config, get_config_value
+
 
 @dataclass
 class CheckResult:
@@ -41,7 +43,22 @@ class ScenarioChecker:
         """
         self.project_dir = project_dir
         self.ac_list = ac_list
-        self.test_dir = Path(project_dir) / 'tests'
+
+        # 从 archetype-config.yml 读取测试目录配置
+        cfg = load_config(project_dir)
+        self.test_dir = Path(project_dir)  # 默认项目根目录
+
+        sit_cfg = get_config_value(cfg, "test.layers.sit", {})
+        if "pytest_fallback" in sit_cfg:
+            self.sit_test_dir = Path(project_dir) / sit_cfg["pytest_fallback"]["dir"]
+        else:
+            self.sit_test_dir = Path(project_dir) / sit_cfg.get("dir", "tests/sit")
+
+        uat_cfg = get_config_value(cfg, "test.layers.uat", {})
+        if "pytest_fallback" in uat_cfg:
+            self.uat_test_dir = Path(project_dir) / uat_cfg["pytest_fallback"]["dir"]
+        else:
+            self.uat_test_dir = Path(project_dir) / uat_cfg.get("dir", "tests/uat")
 
     def check_st01_ac_has_sit_test(self) -> CheckResult:
         """

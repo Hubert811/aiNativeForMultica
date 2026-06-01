@@ -657,6 +657,30 @@ sequenceDiagram
 | Developer | 代码实现、单元测试 | /dev | Code + UT |
 | QA | 质量保障、测试执行 | /qa | Test Report |
 | DevOps | 发布运维、监控告警 | /devops | Deployment Plan |
+| UED | 前端原型、UI/UX 设计、前后端 API 对齐 | /ued | 前端代码、交互原型 |
+
+### 7.2.1 UED（用户体验设计）角色
+
+UED 是 5 个核心角色之外的扩展角色，适用于包含前端界面的项目。
+
+**UED 的职责**：
+- 根据设计文档和 Story AC，生成前端 UI 代码
+- 负责前后端 API 契约对齐，确保接口定义一致
+- 交互原型和视觉设计审核
+
+**UED 的工作流程**（5 步）：
+1. **数据优先**：先理解数据模型和 API 结构，再设计 UI
+2. **原型确认**：快速生成可交互原型，与人类确认方向
+3. **组件实现**：基于原型实现正式组件
+4. **联调验证**：与后端 API 联调，确保数据流正确
+5. **视觉优化**：最终视觉细节打磨
+
+**协作关系**：
+- UED ↔ Architect：前端架构是否合理、组件拆分是否清晰
+- UED ↔ Developer：前后端 API 契约对齐、联调排障
+- UED ↔ PM：Story 验收标准中的 UI 部分是否达成
+
+**无前端项目**：如果项目没有前端界面（纯后端 API 服务），可以在 archetype-config.yml 中将 `ued.enabled: false` 关闭该角色。
 
 ### 7.3 开发流程详解
 
@@ -707,6 +731,59 @@ Agent 在 YOLO mode 下：
 - 生成代码和测试
 - 运行本地验证
 - 完成后主动通知人类
+
+### 7.6 双层级 Issue 状态模型
+
+在 AI-Native 开发中，仅靠 Issue 的宏观状态（todo / in_progress / in_review / done）不足以精确反映 Agent 的工作阶段。引入**双层级状态模型**：
+
+**第一层：Issue status（宏观状态）**
+
+| 状态 | 含义 |
+|------|------|
+| `todo` | 待开始，分配给 Agent 后会立即触发运行 |
+| `in_progress` | 正在进行中 |
+| `in_review` | 待审查 |
+| `done` | 已完成 |
+| `backlog` | 已分配但不触发（serial 依赖的子任务用） |
+| `blocked` | 被阻塞 |
+
+**第二层：Issue metadata phase（微观阶段）**
+
+| phase | 含义 | 何时使用 |
+|-------|------|---------|
+| `writing` | 正在编写/实现 | Agent 开始代码或文档编写时 |
+| `reviewing` | 正在自查/自测 | 实现完成后、提交前 |
+| `ac_review` | AC 验收审查 | 对照 Story 验收标准逐项检查 |
+| `testing` | 测试执行中 | 运行分级测试时 |
+
+**两层状态的关系**：
+```
+Issue status: todo → in_progress → in_review → done
+                          ↓           ↓
+Issue phase: writing → reviewing → ac_review → testing
+```
+
+**使用示例**：
+```bash
+# Agent 开始开发
+multica issue update TES-5 --status in_progress
+multica issue metadata set TES-5 --key phase --value writing
+
+# Agent 完成开发，开始自测
+multica issue metadata set TES-5 --key phase --value reviewing
+
+# 提交 MR，进入审查
+multica issue update TES-5 --status in_review
+multica issue metadata set TES-5 --key phase --value ac_review
+
+# 测试通过，完成
+multica issue update TES-5 --status done
+```
+
+**为什么需要双层级？**
+- 宏观状态对外（看板、Human 可见的进度）
+- 微观阶段对内（Agent 自身的工作状态，用于日志、排查、自动化触发）
+- 未来可以基于 `phase` 编写 autopilot 规则（如：phase=testing 超时时自动通知）
 
 ### 7.4 Code Review 的 AI-Native 实践
 
@@ -971,17 +1048,53 @@ claude
 
 ### 11.1 Agent 的角色定义
 
-🔧 **TODO**: 待补充
-
-**核心 Agent 角色**：
+**核心 Agent 角色**（5 个基础角色 + 1 个扩展角色）：
 
 | Agent | 角色定位 | 主要职责 | 关键技能 |
 |-------|---------|---------|---------|
-| /arch | 架构师 | 架构设计、技术选型 | 设计文档生成、架构审查 |
-| /pm | Scrum Master | 任务管理、排期规划 | SDD 生成、任务拆解 |
-| /dev | 开发工程师 | 代码实现、单元测试 | 代码生成、测试编写 |
-| /qa | 质量工程师 | 测试策略、质量保障 | 测试用例设计、测试执行 |
-| /devops | 运维工程师 | 发布运维、监控告警 | 发布计划、环境搭建 |
+| /arch | 架构师 | 架构设计、技术选型 | 设计文档生成、架构审查、语义化版本管理 |
+| /pm | Scrum Master | 任务管理、排期规划 | SDD 生成、任务拆解、Epic/Story 管理 |
+| /dev | 开发工程师 | 代码实现、单元测试 | 代码生成、测试编写、Git worktree 管理 |
+| /qa | 质量工程师 | 测试策略、质量保障 | 测试用例设计、测试执行、红绿灯质量门禁 |
+| /devops | 运维工程师 | 发布运维、监控告警 | 发布计划、环境搭建、Helm/K8s 部署 |
+| /ued | 用户体验设计师 | 前端原型、UI/UX | 前端代码生成、前后端 API 对齐（可选角色） |
+
+**扩展 Agent 角色**（跨职能技能）：
+
+| Agent | 角色定位 | 主要职责 |
+|-------|---------|---------|
+| /sentinel | 生产巡检员 | 定时巡检、健康报告生成、异常告警 |
+| /spec-xchecker | 一致性检查器 | Design ↔ Scrum ↔ Code ↔ Test 四路交叉验证 |
+| /commit | 提交助手 | 语义化 Commit 生成、MR 创建、飞书任务关联 |
+| /refactor | 重构助手 | 安全重构、代码坏味道检测与修复 |
+| /product | 产品助手 | 需求分析、竞品调研、PRD 编写 |
+
+**角色启用/关闭**：在 `archetype-config.yml` 的 `roles` 段中配置。不需要前端的项目可以关闭 `/ued`，不需要微服务代码生成的项目可以关闭 `/simple_admin_workflow`。
+
+### 11.1.1 扩展技能详解
+
+**spec-xchecker（四路交叉验证）**：
+- 检查 Design Spec ↔ Scrum ↔ Code ↔ Test 四层一致性
+- 支持 quick / medium / deep 三种检查模式
+- 21 项检查规则，覆盖接口、逻辑、数据、验收四个维度
+- 通过注解检测（@RestController、@Service 等）和方法签名匹配实现代码解析
+
+**sentinel（生产巡检）**：
+- 三级巡检：smoke（小时级）、sanity（日级）、full（周级）
+- 自动生成 Markdown 健康报告
+- 质量阈值：GPU 错误率 <1%、CMDB 覆盖率 >=95%、数据质量 >=70%
+- 支持 GitLab CI 定时流水线集成
+
+**commit（提交与 MR 自动化）**：
+- 语义化 Commit 类型：feat / fix / refactor / test / docs / chore / ci
+- MR 创建前置审计：敏感数据检查、测试覆盖检查、文档更新检查
+- 飞书任务自动关联
+- 6 种 MR 模板：feature / bugfix / hotfix / refactoring / docs / ci-cd
+
+**refactor（安全重构）**：
+- 常见代码坏味道检测：长函数、重复代码、上帝类、过度耦合
+- 安全重构技术：Extract Function、Guard Clauses、Replace Temp with Query
+- 重构前后测试必须通过
 
 ### 11.2 Agent 协作模式
 
@@ -996,18 +1109,27 @@ claude
 2. **设计阶段**：
    - /pm 从概要设计生成 SDD
    - /arch 审查 SDD
+   - /ued（如有前端）参与前端架构设计、API 契约对齐
 
 3. **开发阶段**：
    - /dev 从 SDD 生成代码和测试
+   - /ued（如有前端）实现前端代码
    - /qa 审查测试用例
+   - /spec-xchecker 执行一致性检查
 
 4. **测试阶段**：
    - /qa 执行测试，生成测试报告
    - /dev 修复 bug
+   - /commit 创建 MR 并关联飞书任务
 
 5. **发布阶段**：
    - /devops 生成发布计划
    - /devops 执行发布和监控
+
+6. **运维阶段**：
+   - /sentinel 定时巡检，生成健康报告
+   - /spec-xchecker 定期验证三域一致性
+   - 人类根据巡检报告决定是否需要 /arch 优化架构
 
 ### 11.3 Agent 的训练与能力建设
 
@@ -1648,6 +1770,7 @@ Content-Type: application/json
 | 版本 | 日期 | 变更说明 |
 |------|------|---------|
 | v0.1.0-alpha | 2026-04-29 | 初始版本，建立章节框架，填充已知内容 |
+| v0.1.1-alpha | 2026-06-01 | 补充 UED 角色（7.2.1）、双层级状态模型（7.6）、扩展技能体系（11.1.1）、Agent 协作模式扩展（11.2） |
 
 ---
 

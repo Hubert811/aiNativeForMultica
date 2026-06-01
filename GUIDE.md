@@ -2,6 +2,11 @@
 
 > **基于 Agent Team Archetype 原型工程的快速上手指南**
 
+> ⚠️ **技术栈配置统一在 `archetype-config.yml` 中**
+>
+> 本手册中涉及的所有构建命令、测试命令、目录路径以 `archetype-config.yml` 为准。
+> 换语言时只改 YAML，手册的方法论不变。
+
 **目标读者**: 已了解 AI-Native 开发理念，希望快速使用原型工程进行开发的人
 **前置阅读**: 如需了解 AI-Native 开发理念和方法论，请参阅 [AI-Native Development Guide Book](docs/guides/ai_native_development_guide_book.md)
 

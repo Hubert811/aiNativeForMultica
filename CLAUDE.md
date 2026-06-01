@@ -13,54 +13,61 @@ This is a **prototype project (原型工程)** that demonstrates AI-native proje
 - ❌ No business logic implementations
 - ❌ Not runnable as a production service
 
-**Usage**: Copy this project structure as a starting point for new projects, then implement the interfaces defined in `internal/dao/interfaces.go`.
+**Usage**: Copy this project structure as a starting point for new projects, then implement the interfaces defined in the repository layer.
+
+## ⚠️ 技术栈配置
+
+**本项目所有技术栈配置统一在 `archetype-config.yml` 中**。
+
+- 构建/测试命令 → `build_tool.commands.*`
+- 测试目录和文件模式 → `test.layers.*`
+- 目录映射 → `directories.layers.*`
+- 质量工具 → `quality.*`
+
+不要硬编码语言或命令，以 `archetype-config.yml` 为准。
 
 ## Development Commands
 
-### Go Development
+### 构建和测试（参考 archetype-config.yml）
 
 ```bash
-# Run unit tests
-make test
-go test -v ./internal/...
+# 以下命令为 Java + Maven 示例，实际命令见 archetype-config.yml → build_tool.commands
 
-# Format code
-make fmt
+# 运行单元测试
+mvn test
 
-# Run linter
-make lint
+# 格式化代码
+mvn spotless:apply
 
-# Build Linux binary
-make build
-# Or explicitly:
-make build-linux
+# 运行 lint
+mvn checkstyle:check
 
-# Run service locally
-make run
-# Or:
-go run main.go -f etc/config/config.yaml
+# 打包
+mvn package
 
-# Install development tools
-make tools
+# 本地运行
+mvn spring-boot:run
+
+# 生成覆盖率报告
+mvn jacoco:report
 ```
 
-### Python Testing
+### 测试（参考 archetype-config.yml → test.layers）
 
 ```bash
-# Activate virtual environment (if using uv)
-source .venv/bin/activate
+# 以下命令为示例，实际命令和目录见 archetype-config.yml
 
-# Run API tests
-pytest tests/api/ -v
+# 运行 API 测试
+mvn test -Dtest="*ApiTest"
 
-# Run SIT tests (requires local K8s environment)
-pytest tests/sit/ -v
+# 运行 SIT 集成测试
+mvn test -Dtest="*SitTest"
 
-# Run UAT tests
-pytest tests/uat/ -v
+# 运行 UAT 验收测试
+mvn test -Dtest="*UatTest"
 
-# Generate HTML test report
-pytest tests/ -v --html=test_reports/test_report.html
+# 生成 HTML 测试报告
+mvn surefire-report:report
 ```
 
 ### Docker & Deployment
@@ -83,115 +90,102 @@ cd deploy/docker && docker-compose up -d
 
 ### Layered Architecture
 
+**分层映射见 `archetype-config.yml` → `directories.layers`**
+
+通用分层原则：
 ```
 HTTP Request
     ↓
-Handler (internal/handler/)  - HTTP request/response handling
+Controller/Handler    — HTTP request/response handling
     ↓
-Logic (internal/logic/)      - Business logic
+Service/Logic         — Business logic
     ↓
-DAO (internal/dao/)          - Data access abstraction (interface-based)
+Repository/DAO        — Data access abstraction (interface-based)
     ↓
-Model (internal/model/)      - Data models (GORM entities)
+Entity/Model          — Data models (JPA/GORM entities)
 ```
 
 **Key Principles**:
-- **Interface-based DAO layer**: All data access goes through interfaces defined in `internal/dao/interfaces.go`
+- **Interface-based data access layer**: All data access goes through interfaces
 - **Dependency injection**: Components receive dependencies through constructors
 - **Separation of concerns**: Each layer has distinct responsibilities
 
 ### Technology Stack
 
-**Backend**:
-- Go 1.24+
-- go-zero framework (REST API)
-- GORM (ORM)
-- PostgreSQL (database)
-- Kubernetes client-go (K8s integration)
+**见 `archetype-config.yml` → `framework`**
 
-**Testing**:
-- Go testing (unit tests)
-- Pytest (integration/SIT/UAT tests)
-- K8s kind/minikube (SIT environment)
-
-**DevOps**:
-- Docker (containerization)
-- Kubernetes (orchestration)
-- Helm Charts (deployment)
-- GitLab CI (CI/CD)
+默认参考：
+- **Backend**: Java 17+ / Spring Boot / JPA(MyBatis) / PostgreSQL
+- **Testing**: JUnit 5 + Mockito (UT), MockMvc/REST Assured (API), SpringBootTest (SIT)
+- **DevOps**: Docker / Kubernetes / Helm Charts / GitLab CI
 
 ## Directory Structure
 
-```
-internal/
-├── config/          # Configuration structure definitions
-├── dao/             # Data access layer interfaces (no implementations)
-├── handler/         # HTTP handlers (empty - only .gitkeep)
-├── logic/           # Business logic (empty - only .gitkeep)
-├── model/           # Data models (GORM entities)
-├── middleware/      # HTTP middleware (empty - only .gitkeep)
-├── pkg/             # Utility packages (empty - only .gitkeep)
-├── svc/             # Service context (empty - only .gitkeep)
-└── types/           # Common type definitions
+**目录映射见 `archetype-config.yml` → `directories`**
 
-tests/
-├── conftest.py      # Main pytest configuration
-├── api/             # Contract tests (API level)
-├── sit/             # System integration tests
-├── uat/             # User acceptance tests
-└── regression/      # Regression tests
+通用结构：
+```
+src/main/java/{base_package}/
+├── controller/       # HTTP handlers (REST endpoints)
+├── service/          # Business logic
+├── repository/       # Data access layer interfaces
+├── entity/           # Data models (JPA entities)
+├── dto/              # Data transfer objects
+├── config/           # Configuration classes
+├── filter/           # HTTP middleware
+└── util/             # Utility packages
+
+src/test/java/
+├── controller/       # API contract tests
+├── service/          # Unit tests (with Mockito)
+├── sit/              # System integration tests (@SpringBootTest)
+└── uat/              # User acceptance tests (Cucumber)
 
 docs/
-├── design/          # Architecture design documents
-├── guides/          # Usage guides
-└── scrum/           # Project management docs
+├── design/           # Architecture design documents
+├── guides/           # Usage guides
+└── scrum/            # Project management docs
 
 deploy/
-├── docker/          # Docker Compose (local development)
-└── k8s/             # Kubernetes Helm Charts
+├── docker/           # Docker Compose (local development)
+└── k8s/              # Kubernetes Helm Charts
 
-etc/
-└── config/          # Configuration files (framework only)
+src/main/resources/
+└── *.yml             # Configuration files (Spring profiles)
 ```
 
 ## Testing Strategy
 
-This project uses a **four-layer testing pyramid**:
+**配置见 `archetype-config.yml` → `test`**
 
-| Layer | Type       | Location            | Purpose                          |
-|-------|------------|---------------------|----------------------------------|
-| UT    | Unit tests | `internal/**/*_test.go` | Function-level testing          |
-| API   | Contract   | `tests/api/`        | API contract validation         |
-| SIT   | Integration| `tests/sit/`        | Business flow validation        |
-| UAT   | Acceptance| `tests/uat/`        | User scenario validation        |
+本项目使用**四层测试金字塔**：
 
-**Coverage Goals**:
-- UT: ≥ 50%
-- API: 100%
-- SIT: ≥ 90%
-- UAT: ≥ 85%
+| 层级 | 类型 | 位置（见 YAML `test.layers.*.dir`） | 目的 | 覆盖率目标 |
+|------|------|---------|------|-----------|
+| UT | 单元测试 | `src/test/java/` | 函数级逻辑正确性 | ≥ 50% |
+| API | 契约测试 | `src/test/java/.../api/` | API 接口契约验证 | 100% |
+| SIT | 集成测试 | `src/test/java/.../sit/` | 业务流程验证 | ≥ 90% |
+| UAT | 验收测试 | `src/test/java/.../uat/` | 端到端用户场景 | ≥ 85% |
 
-**Important**: Unit tests (`*_test.go`) are stored alongside code in `internal/`, while integration/SIT/UAT tests are in `tests/` directory.
+**Important**: 单元测试同包结构存放（`src/test/java/com/xxx/service/`），集成/SIT/UAT 测试在对应子目录下。
 
 ## Configuration Management
 
-### Configuration File Locations
+**配置见 `archetype-config.yml` → `directories.config`**
 
-**Runtime Configuration** (mutable):
-- `etc/config-local.yaml` - Local development
-- `etc/config-test.yaml` - Test environment
-- `etc/config-prod.yaml` - Production environment
+**Runtime Configuration**:
+- `src/main/resources/application.yml` — 本地开发
+- `src/main/resources/application-test.yml` — 测试环境
+- `src/main/resources/application-prod.yml` — 生产环境
 
-**Deployment Configuration** (immutable):
-- `deploy/docker/docker-compose.yml` - Local development
-- `deploy/k8s/helm/project-template/values-test.yaml` - Test environment
-- `deploy/k8s/helm/project-template/values-prod.yaml` - Production environment
+**Deployment Configuration**:
+- `deploy/docker/docker-compose.yml` — 本地开发
+- `deploy/k8s/helm/...` — K8s 部署
 
-### Config Loading Priority
-
-1. Command-line flag: `-f /path/to/config.yaml`
-2. Environment variable: `CONFIG_FILE=/path/to/config.yaml`
-3. Default: `etc/config/config.yaml`
+**Spring Profile 加载优先级**:
+1. 命令行: `--spring.profiles.active=test`
+2. 环境变量: `SPRING_PROFILES_ACTIVE=test`
+3. 默认: `application.yml`
 
 ## Key Design Documents
 
@@ -205,22 +199,22 @@ When implementing features based on this prototype, reference these documents:
 ## When Working with This Codebase
 
 ### For Learning Architecture
-- Read interface definitions in `internal/dao/interfaces.go`
-- Study data models in `internal/model/`
+- Read interface definitions in the repository layer (见 `directories.layers.repository`)
+- Study data models in the entity layer (见 `directories.layers.entity`)
 - Review design documents in `docs/design/`
 
 ### For Creating New Projects
 1. Copy this project structure
-2. Implement DAO interfaces from `internal/dao/interfaces.go`
-3. Add handlers in `internal/handler/`
-4. Add business logic in `internal/logic/`
-5. Fill in configuration values in `etc/config/`
-6. Write tests following the four-layer strategy
+2. Implement Repository interfaces (见 `directories.layers.repository`)
+3. Add controllers in `controller/` (见 `directories.layers.controller`)
+4. Add business logic in `service/` (见 `directories.layers.service`)
+5. Fill in configuration values in `src/main/resources/` (见 `directories.config`)
+6. Write tests following the four-layer strategy (见 `test.layers`)
 
 ### Important Constraints
 
 - **DO NOT** add business logic implementations to this prototype project
-- **DO NOT** modify framework code in `internal/` without understanding the architecture
+- **DO NOT** modify framework code without understanding the architecture
 - **DO** use this as a reference for understanding AI-native project patterns
 - **DO** copy the structure when creating new projects
 

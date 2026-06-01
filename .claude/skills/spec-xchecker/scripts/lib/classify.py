@@ -4,13 +4,15 @@
 
 功能:
 - 分类变更文件类型（Code/Doc/Test）
-- 支持 Go/Python 文件
+- 支持多语言（从 archetype-config.yml 读取配置）
 """
 
 import re
 from pathlib import Path
 from typing import List, Dict
 from enum import Enum
+
+from .config_loader import load_config, get_config_value
 
 
 class FileType(Enum):
@@ -20,6 +22,51 @@ class FileType(Enum):
     TEST = "test"
     CONFIG = "config"
     UNKNOWN = "unknown"
+
+
+# 默认扩展名（YAML 未配置时的 fallback）
+DEFAULT_CODE_EXTS = {'.go', '.py', '.js', '.ts', '.java', '.c', '.cpp', '.h', '.hpp',
+                     '.cs', '.php', '.rb', '.swift', '.kt', '.rs'}
+DEFAULT_TEST_PATHS = ['/tests/', '\\tests\\']
+
+
+def _load_file_patterns(cfg: dict) -> tuple:
+    """从配置加载文件模式。返回 (code_exts, test_patterns, test_paths, config_exts)"""
+    cfg_patterns = get_config_value(cfg, "spec_xchecker.file_patterns", {})
+
+    # 代码扩展名
+    source_patterns = cfg_patterns.get("source", ["**/*.go", "**/*.py", "**/*.java"])
+    code_exts = set()
+    for p in source_patterns:
+        if p.startswith("**/*"):
+            code_exts.add(Path(p).suffix.lower())
+
+    # 测试文件模式
+    test_patterns = cfg_patterns.get("test", ["*_test.go", "*Test.java", "test_*.py"])
+
+    # 配置扩展名
+    config_patterns = cfg_patterns.get("config", ["**/*.yaml", "**/*.yml", "**/*.json", "**/*.toml"])
+    config_exts = set()
+    for p in config_patterns:
+        if p.startswith("**/*"):
+            config_exts.add(Path(p).suffix.lower())
+
+    return code_exts or DEFAULT_CODE_EXTS, test_patterns, DEFAULT_TEST_PATHS, config_exts or {'.yaml', '.yml', '.json', '.toml'}
+
+
+# 模块级缓存
+_cached_patterns = None
+
+
+def _get_patterns():
+    global _cached_patterns
+    if _cached_patterns is None:
+        try:
+            cfg = load_config()
+        except Exception:
+            cfg = {}
+        _cached_patterns = _load_file_patterns(cfg)
+    return _cached_patterns
 
 
 def classify_files(files: List[Path]) -> Dict[FileType, List[Path]]:
@@ -57,10 +104,7 @@ def _classify_single_file(file: Path) -> FileType:
     Returns:
         文件类型
     """
-    # 检查文件扩展名
-    ext = file.suffix.lower()
-
-    # 测试文件
+    # 测试文件优先判断
     if _is_test_file(file):
         return FileType.TEST
 
@@ -81,24 +125,20 @@ def _classify_single_file(file: Path) -> FileType:
 
 def _is_test_file(file: Path) -> bool:
     """判断是否为测试文件"""
+    _, test_patterns, test_paths, _ = _get_patterns()
+
     # 检查文件路径
     path_str = str(file)
-    if '/tests/' in path_str or '\\tests\\' in path_str:
-        return True
+    for tp in test_paths:
+        if tp in path_str:
+            return True
 
-    # 检查文件名
-    if file.name.startswith('test_') or file.name.endswith('_test.py'):
-        return True
-
-    # 检查扩展名
-    if file.suffix in ['.py']:
-        # 检查内容中是否包含测试关键字
-        try:
-            content = file.read_text(encoding='utf-8', errors='ignore')
-            if re.search(r'(unittest|pytest|test_\w+)', content):
-                return True
-        except Exception:
-            pass
+    # 检查文件名是否匹配测试模式
+    for pattern in test_patterns:
+        # Convert glob pattern to regex
+        regex = pattern.replace("*", ".*").replace("?", ".")
+        if re.search(regex, file.name):
+            return True
 
     return False
 
@@ -116,11 +156,9 @@ def _is_doc_file(file: Path) -> bool:
 
 def _is_config_file(file: Path) -> bool:
     """判断是否为配置文件"""
-    config_extensions = {
-        '.yaml', '.yml', '.json', '.toml',
-        '.ini', '.cfg', '.conf',
-        '.xml', '.sh', '.bash',
-    }
+    _, _, _, config_exts = _get_patterns()
+
+    config_extensions = config_exts | {'.ini', '.cfg', '.conf', '.xml', '.sh', '.bash'}
 
     # 检查常见配置文件名
     config_filenames = {
@@ -136,12 +174,9 @@ def _is_config_file(file: Path) -> bool:
 
 def _is_code_file(file: Path) -> bool:
     """判断是否为代码文件"""
-    code_extensions = {
-        '.go', '.py', '.js', '.ts', '.java', '.c', '.cpp', '.h', '.hpp',
-        '.cs', '.php', '.rb', '.swift', '.kt', '.rs',
-    }
+    code_exts, _, _, _ = _get_patterns()
 
-    return file.suffix.lower() in code_extensions
+    return file.suffix.lower() in code_exts
 
 
 # CLI 测试接口

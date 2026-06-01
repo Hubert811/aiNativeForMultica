@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import List, Set
 from dataclasses import dataclass
 
+from lib.config_loader import load_config, get_config_value
+
 
 @dataclass
 class CheckResult:
@@ -41,7 +43,20 @@ class TestChecker:
         """
         self.project_dir = project_dir
         self.code_files = code_files
-        self.test_dir = Path(project_dir) / 'tests'
+
+        # 从 archetype-config.yml 读取测试目录配置
+        cfg = load_config(project_dir)
+        self.test_dir = Path(project_dir)  # 默认项目根目录
+
+        # 优先使用 JUnit 层目录（Java），回退到 pytest 层目录
+        ut_cfg = get_config_value(cfg, "test.layers.ut", {})
+        self.ut_dir = Path(project_dir) / ut_cfg.get("dir", "src/test/java")
+
+        api_cfg = get_config_value(cfg, "test.layers.api", {})
+        if "pytest_fallback" in api_cfg:
+            self.api_test_dir = Path(project_dir) / api_cfg["pytest_fallback"]["dir"]
+        else:
+            self.api_test_dir = Path(project_dir) / api_cfg.get("dir", "tests/api")
 
     def check_ct01_ut_functions_have_tests(self) -> CheckResult:
         """

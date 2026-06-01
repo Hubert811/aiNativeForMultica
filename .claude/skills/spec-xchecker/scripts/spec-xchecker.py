@@ -15,6 +15,8 @@ import dataclasses
 from pathlib import Path
 from datetime import datetime
 
+from scripts.lib.config_loader import load_config, get_config_value
+
 # 导入 checker 模块
 from scripts.lib.story_resolver import (
     get_current_story_id,
@@ -34,9 +36,12 @@ def get_code_files(project_dir: str, scope: str = 'all') -> list[Path]:
     """
     获取要检查的代码文件
 
+    优先从 archetype-config.yml 读取文件模式，
+    如果找不到配置则使用默认的 Go/Python/Java 模式。
+
     Args:
         project_dir: 项目根目录
-        scope: 检查范围 ('all', 'go', 'python', 'internal')
+        scope: 检查范围 ('all', 'go', 'python', 'java', 'internal')
 
     Returns:
         代码文件列表
@@ -44,13 +49,21 @@ def get_code_files(project_dir: str, scope: str = 'all') -> list[Path]:
     project_path = Path(project_dir)
     code_files = []
 
-    # Go 文件
-    if scope in ['all', 'go']:
-        code_files.extend(project_path.rglob('*.go'))
+    # 尝试从配置读取
+    cfg = load_config(project_dir)
+    source_patterns = get_config_value(cfg, "spec_xchecker.file_patterns.source", [])
 
-    # Python 文件
-    if scope in ['all', 'python']:
-        code_files.extend(project_path.rglob('*.py'))
+    if source_patterns:
+        for pattern in source_patterns:
+            code_files.extend(project_path.glob(pattern))
+    else:
+        # Fallback: 默认 Go + Python 模式（兼容旧项目）
+        if scope in ['all', 'go']:
+            code_files.extend(project_path.rglob('*.go'))
+        if scope in ['all', 'python']:
+            code_files.extend(project_path.rglob('*.py'))
+        if scope in ['all', 'java']:
+            code_files.extend(project_path.rglob('*.java'))
 
     # 过滤掉 vendor、node_modules 等
     code_files = [
