@@ -1,0 +1,16 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: punch-order-service
+
+# 预占时效缓存配置
+preoccupy:
+  cache:
+    ttl-minutes: 30      # 缓存 TTL，被动刷新
+    max-size: 1000       # 最大缓存条目数
+
+# Webshop 服务地址（读取对接抬头预占时效配置）
+webshop:
+  base-url: ${WEBSHOP_BASE_URL:}
